@@ -1,0 +1,12 @@
+# ChatGPT Analytics Pro - Dependencias
+
+# Procesamiento de texto y análisis de sentimientos
+textblob>=0.17.1
+nltk>=3.8.1
+
+# Procesamiento de datos
+pandas>=1.5.0
+numpy>=1.24.0
+
+# Utilidades adicionales (opcionales)
+python-dateutil>=2.8.2

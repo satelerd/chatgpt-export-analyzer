@@ -1,0 +1,95 @@
+# ChatGPT Analytics Pro - .gitignore
+
+# Datos sensibles del usuario (NUNCA subir al repo)
+*.zip
+conversations.json
+user.json
+message_feedback.json
+shared_conversations.json
+shopping.json
+chat.html
+
+# Archivos de audio, imágenes y videos del usuario
+**/audio/
+**/image/
+**/video/
+**/file-*
+file_*
+
+# Directorios de conversaciones específicas del usuario
+[0-9a-f]*-[0-9a-f]*-[0-9a-f]*-[0-9a-f]*-[0-9a-f]*/
+user-*/
+
+# Archivos generados por el procesamiento
+chatgpt_stats.json
+audio_mapping.json
+user_audio_mapping.json
+first_user_audio.json
+primeras_conversaciones.txt
+
+# Cache de Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Entornos virtuales
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Sistema operativo
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Archivos temporales
+*.tmp
+*.temp
+temp/
+tmp/
+
+# Configuración local
+config.local.py
+.env
+.env.local
+
+# Datos de ejemplo (opcional)
+example_data/
+sample_data/
