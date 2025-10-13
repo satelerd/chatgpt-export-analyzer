@@ -1396,7 +1396,18 @@
         // Cargar datos
         async function loadData() {
             try {
-                const response = await fetch('chatgpt_stats.json');
+                // Obtener session_id de la URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const sessionId = urlParams.get('session_id');
+                
+                if (!sessionId) {
+                    throw new Error('No se encontró session_id en la URL');
+                }
+                
+                const response = await fetch(`/api/stats?session_id=${sessionId}`);
+                if (!response.ok) {
+                    throw new Error('Error cargando estadísticas');
+                }
                 statsData = await response.json();
                 
                 // Actualizar preview del header
@@ -2187,10 +2198,12 @@
                 
                 // Cargar mapeo de audios si no está cargado
                 if (!window.audioMapping) {
-                    fetch('audio_mapping.json')
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const sessionId = urlParams.get('session_id');
+                    fetch(`/api/stats?session_id=${sessionId}`)
                         .then(response => response.json())
                         .then(data => {
-                            window.audioMapping = data;
+                            window.audioMapping = data.audio_mapping || {};
                             playRandomAudio();
                         })
                         .catch(() => {
@@ -2230,7 +2243,9 @@
                     // Crear elemento de audio
                     const audio = document.createElement('audio');
                     audio.controls = true;
-                    audio.src = randomAudioFile;
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const sessionId = urlParams.get('session_id');
+                    audio.src = `/api/audio/${randomAudioFile}?session_id=${sessionId}`;
                     audio.style.width = '100%';
                     audio.style.marginTop = '1rem';
                     
@@ -2268,7 +2283,9 @@
                 
                 // Cargar conversaciones si no están cargadas
                 if (!window.conversationsData) {
-                    fetch('conversations.json')
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const sessionId = urlParams.get('session_id');
+                    fetch(`/api/conversations?session_id=${sessionId}`)
                         .then(response => response.json())
                         .then(data => {
                             window.conversationsData = data;
@@ -2366,7 +2383,9 @@
                 
                 // Cargar conversaciones si no están cargadas
                 if (!window.conversationsData) {
-                    fetch('conversations.json')
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const sessionId = urlParams.get('session_id');
+                    fetch(`/api/conversations?session_id=${sessionId}`)
                         .then(response => response.json())
                         .then(data => {
                             window.conversationsData = data;
@@ -2499,7 +2518,9 @@
                             data.audios.forEach((audio, index) => {
                                 const audioElement = document.createElement('audio');
                                 audioElement.controls = true;
-                                audioElement.src = audio.audio_file;
+                                const urlParams = new URLSearchParams(window.location.search);
+                                const sessionId = urlParams.get('session_id');
+                                audioElement.src = `/api/audio/${audio.audio_file}?session_id=${sessionId}`;
                                 audioElement.style.width = '100%';
                                 audioElement.style.marginTop = '0.5rem';
                                 

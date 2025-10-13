@@ -52,6 +52,38 @@ class ChatGPTParser:
     def __init__(self, data_dir="."):
         self.data_dir = Path(data_dir)
         self.stats = self._initialize_stats()
+    
+    def parse_and_analyze(self, conversations_file, user_file=None):
+        """Método principal para parsear y analizar datos"""
+        self.data_dir = Path(conversations_file).parent
+        if user_file:
+            self.user_file = user_file
+        
+        # Procesar conversaciones
+        self.process_conversations()
+        
+        # Generar estadísticas avanzadas
+        self._calculate_advanced_stats()
+        
+        # Convertir defaultdicts a dicts normales para JSON
+        return self._convert_stats_for_json()
+    
+    def _convert_stats_for_json(self):
+        """Convierte defaultdicts a dicts normales para serialización JSON"""
+        converted_stats = {}
+        for key, value in self.stats.items():
+            if isinstance(value, defaultdict):
+                converted_stats[key] = dict(value)
+            elif isinstance(value, dict):
+                converted_stats[key] = {}
+                for sub_key, sub_value in value.items():
+                    if isinstance(sub_value, defaultdict):
+                        converted_stats[key][sub_key] = dict(sub_value)
+                    else:
+                        converted_stats[key][sub_key] = sub_value
+            else:
+                converted_stats[key] = value
+        return converted_stats
         
     def _initialize_stats(self):
         """Inicializa la estructura de estadísticas"""

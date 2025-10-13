@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatGPT Data Explorer - Analiza tus conversaciones</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Orbitron:wght@400;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-bg: #0c0c0c;
+            --secondary-bg: #1a1a1a;
+            --accent-bg: #2a2a2a;
+            --card-bg: rgba(255, 255, 255, 0.02);
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --border-glass: rgba(255, 255, 255, 0.1);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --text-muted: rgba(255, 255, 255, 0.4);
+            --accent-primary: #6366f1;
+            --accent-secondary: #8b5cf6;
+            --accent-tertiary: #06b6d4;
+            --success: #10b981;
+            --error: #ef4444;
+            --glow-primary: 0 0 30px rgba(99, 102, 241, 0.3);
+            --glow-secondary: 0 0 20px rgba(139, 92, 246, 0.2);
+            --glow-tertiary: 0 0 25px rgba(6, 182, 212, 0.25);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--primary-bg);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            position: relative;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* Fondo artístico abstracto */
+        .background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: 
+                radial-gradient(circle at 15% 20%, rgba(99, 102, 241, 0.12) 0%, transparent 60%),
+                radial-gradient(circle at 85% 80%, rgba(139, 92, 246, 0.08) 0%, transparent 60%),
+                radial-gradient(circle at 50% 50%, rgba(6, 182, 212, 0.06) 0%, transparent 60%),
+                radial-gradient(circle at 80% 20%, rgba(99, 102, 241, 0.04) 0%, transparent 40%),
+                radial-gradient(circle at 20% 80%, rgba(139, 92, 246, 0.03) 0%, transparent 40%),
+                linear-gradient(135deg, var(--primary-bg) 0%, var(--secondary-bg) 100%);
+        }
+
+        .background::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 30% 70%, rgba(99, 102, 241, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 70% 30%, rgba(139, 92, 246, 0.04) 0%, transparent 50%),
+                radial-gradient(circle at 10% 90%, rgba(6, 182, 212, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 90% 10%, rgba(99, 102, 241, 0.02) 0%, transparent 50%);
+            animation: artisticFloat 45s ease-in-out infinite;
+        }
+
+        .background::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.008'%3E%3Ccircle cx='60' cy='60' r='0.8'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"),
+                url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%236366f1' fill-opacity='0.01'%3E%3Ccircle cx='40' cy='40' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            animation: gridFloat 60s linear infinite;
+        }
+
+        @keyframes artisticFloat {
+            0%, 100% { 
+                transform: translateY(0px) scale(1) rotate(0deg); 
+                opacity: 0.6; 
+            }
+            25% { 
+                transform: translateY(-15px) scale(1.02) rotate(0.5deg); 
+                opacity: 0.8; 
+            }
+            50% { 
+                transform: translateY(-25px) scale(1.05) rotate(0deg); 
+                opacity: 1; 
+            }
+            75% { 
+                transform: translateY(-10px) scale(1.03) rotate(-0.5deg); 
+                opacity: 0.9; 
+            }
+        }
+
+        @keyframes gridFloat {
+            0% { transform: translateX(0px) translateY(0px) rotate(0deg); }
+            100% { transform: translateX(-120px) translateY(-120px) rotate(360deg); }
+        }
+
+        /* Partículas que emanan del círculo */
+        .particles {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 400px;
+            height: 400px;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: var(--accent-primary);
+            border-radius: 50%;
+            opacity: 0;
+            animation: particleFloat 8s ease-in-out infinite;
+        }
+
+        .particle:nth-child(1) {
+            top: 50%;
+            left: 50%;
+            animation-delay: 0s;
+            animation-duration: 6s;
+        }
+
+        .particle:nth-child(2) {
+            top: 45%;
+            left: 55%;
+            animation-delay: 1s;
+            animation-duration: 7s;
+        }
+
+        .particle:nth-child(3) {
+            top: 55%;
+            left: 45%;
+            animation-delay: 2s;
+            animation-duration: 8s;
+        }
+
+        .particle:nth-child(4) {
+            top: 40%;
+            left: 50%;
+            animation-delay: 3s;
+            animation-duration: 6.5s;
+        }
+
+        .particle:nth-child(5) {
+            top: 60%;
+            left: 50%;
+            animation-delay: 4s;
+            animation-duration: 7.5s;
+        }
+
+        .particle:nth-child(6) {
+            top: 50%;
+            left: 40%;
+            animation-delay: 5s;
+            animation-duration: 6.8s;
+        }
+
+        .particle:nth-child(7) {
+            top: 50%;
+            left: 60%;
+            animation-delay: 6s;
+            animation-duration: 7.2s;
+        }
+
+        @keyframes particleFloat {
+            0% {
+                opacity: 0;
+                transform: translate(0, 0) scale(0);
+            }
+            10% {
+                opacity: 1;
+                transform: translate(0, 0) scale(1);
+            }
+            90% {
+                opacity: 0.3;
+                transform: translate(var(--random-x, 50px), var(--random-y, 50px)) scale(0.5);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(var(--random-x, 50px), var(--random-y, 50px)) scale(0);
+            }
+        }
+
+        /* Contenedor principal */
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Textos flotantes difuminados */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 3.5rem;
+            font-weight: 200;
+            position: absolute;
+            opacity: 0.3;
+            animation: titleBlur 8s ease-in-out infinite;
+            line-height: 1.1;
+            filter: blur(15px);
+            background: linear-gradient(45deg, 
+                rgba(99, 102, 241, 0.6) 0%, 
+                rgba(139, 92, 246, 0.4) 50%,
+                rgba(6, 182, 212, 0.3) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 
+                0 0 60px rgba(99, 102, 241, 0.4),
+                0 0 100px rgba(139, 92, 246, 0.3);
+            will-change: opacity, filter, transform;
+        }
+
+        @keyframes titleBlur {
+            0% {
+                opacity: 0.3;
+                filter: blur(15px);
+                transform: translateY(50px) scale(0.8);
+            }
+            25% {
+                opacity: 0.5;
+                filter: blur(8px);
+                transform: translateY(0) scale(1);
+            }
+            50% {
+                opacity: 0.8;
+                filter: blur(3px);
+                transform: translateY(-20px) scale(1.1);
+            }
+            75% {
+                opacity: 0.5;
+                filter: blur(8px);
+                transform: translateY(0) scale(1);
+            }
+            100% {
+                opacity: 0.4;
+                filter: blur(12px);
+                transform: translateY(30px) scale(0.9);
+            }
+        }
+
+        .title:nth-child(1) {
+            top: 5%;
+            left: 2%;
+            animation-delay: 0s;
+            background: linear-gradient(45deg, 
+                rgba(99, 102, 241, 0.6) 0%, 
+                rgba(139, 92, 246, 0.4) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .title:nth-child(2) {
+            top: 12%;
+            right: 3%;
+            animation-delay: 1s;
+            background: linear-gradient(45deg, 
+                rgba(6, 182, 212, 0.6) 0%, 
+                rgba(99, 102, 241, 0.4) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .title:nth-child(3) {
+            bottom: 15%;
+            left: 5%;
+            animation-delay: 2s;
+            background: linear-gradient(45deg, 
+                rgba(236, 72, 153, 0.6) 0%, 
+                rgba(245, 158, 11, 0.4) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .title:nth-child(4) {
+            top: 45%;
+            right: 8%;
+            animation-delay: 3s;
+            background: linear-gradient(45deg, 
+                rgba(245, 158, 11, 0.6) 0%, 
+                rgba(34, 197, 94, 0.4) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .title:nth-child(5) {
+            top: 25%;
+            left: 35%;
+            animation-delay: 4s;
+            background: linear-gradient(45deg, 
+                rgba(34, 197, 94, 0.6) 0%, 
+                rgba(239, 68, 68, 0.4) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .title:nth-child(6) {
+            bottom: 30%;
+            right: 20%;
+            animation-delay: 5s;
+            background: linear-gradient(45deg, 
+                rgba(239, 68, 68, 0.6) 0%, 
+                rgba(139, 92, 246, 0.4) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .title:nth-child(7) {
+            top: 65%;
+            left: 15%;
+            animation-delay: 6s;
+            background: linear-gradient(45deg, 
+                rgba(139, 92, 246, 0.6) 0%, 
+                rgba(6, 182, 212, 0.4) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .title:nth-child(8) {
+            top: 20%;
+            right: 30%;
+            animation-delay: 7s;
+            background: linear-gradient(45deg, 
+                rgba(6, 182, 212, 0.6) 0%, 
+                rgba(236, 72, 153, 0.4) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .title:nth-child(9) {
+            top: 8%;
+            left: 25%;
+            animation-delay: 8s;
+            background: linear-gradient(45deg, 
+                rgba(236, 72, 153, 0.6) 0%, 
+                rgba(245, 158, 11, 0.4) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .title:nth-child(10) {
+            bottom: 8%;
+            left: 30%;
+            animation-delay: 9s;
+            background: linear-gradient(45deg, 
+                rgba(245, 158, 11, 0.6) 0%, 
+                rgba(34, 197, 94, 0.4) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .title:nth-child(11) {
+            top: 35%;
+            right: 15%;
+            animation-delay: 10s;
+            background: linear-gradient(45deg, 
+                rgba(34, 197, 94, 0.6) 0%, 
+                rgba(239, 68, 68, 0.4) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .title:nth-child(12) {
+            bottom: 45%;
+            left: 40%;
+            animation-delay: 11s;
+            background: linear-gradient(45deg, 
+                rgba(239, 68, 68, 0.6) 0%, 
+                rgba(139, 92, 246, 0.4) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .title:nth-child(13) {
+            top: 55%;
+            left: 8%;
+            animation-delay: 12s;
+            background: linear-gradient(45deg, 
+                rgba(139, 92, 246, 0.6) 0%, 
+                rgba(6, 182, 212, 0.4) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .title:nth-child(14) {
+            top: 40%;
+            right: 45%;
+            animation-delay: 13s;
+            background: linear-gradient(45deg, 
+                rgba(6, 182, 212, 0.6) 0%, 
+                rgba(236, 72, 153, 0.4) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .title:nth-child(15) {
+            bottom: 25%;
+            right: 8%;
+            animation-delay: 14s;
+            background: linear-gradient(45deg, 
+                rgba(236, 72, 153, 0.6) 0%, 
+                rgba(245, 158, 11, 0.4) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .title:nth-child(16) {
+            top: 75%;
+            right: 25%;
+            animation-delay: 15s;
+            background: linear-gradient(45deg, 
+                rgba(245, 158, 11, 0.6) 0%, 
+                rgba(34, 197, 94, 0.4) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Experience Container */
+        .experience-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            height: 400px;
+            margin: 0 auto;
+            animation: fadeInUp 1.5s ease-out 0.3s both;
+        }
+
+        /* Upload Zone - Experiencia inmersiva */
+        .upload-zone {
+            width: 100%;
+            height: 100%;
+            border: 2px solid transparent;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+            background: var(--glass-bg);
+            backdrop-filter: blur(30px);
+            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+            background-image: 
+                linear-gradient(var(--glass-bg), var(--glass-bg)),
+                conic-gradient(from 0deg, 
+                    transparent 0deg,
+                    rgba(99, 102, 241, 0.3) 60deg,
+                    rgba(139, 92, 246, 0.4) 120deg,
+                    rgba(6, 182, 212, 0.3) 180deg,
+                    rgba(99, 102, 241, 0.2) 240deg,
+                    transparent 300deg,
+                    transparent 360deg
+                );
+            background-origin: border-box;
+            background-clip: padding-box, border-box;
+            animation: borderRotate 20s linear infinite;
+            z-index: 10;
+        }
+
+        .upload-zone:hover {
+            transform: scale(1.05);
+            box-shadow: 
+                var(--glow-primary),
+                0 0 60px rgba(99, 102, 241, 0.2),
+                inset 0 0 60px rgba(99, 102, 241, 0.1);
+        }
+
+        .upload-zone.dragover {
+            transform: scale(1.1);
+            background: rgba(139, 92, 246, 0.1);
+            box-shadow: 
+                var(--glow-secondary),
+                0 0 80px rgba(139, 92, 246, 0.3),
+                inset 0 0 80px rgba(139, 92, 246, 0.15);
+            animation-duration: 5s;
+        }
+
+        @keyframes borderRotate {
+            0% { background-image: 
+                linear-gradient(var(--glass-bg), var(--glass-bg)),
+                conic-gradient(from 0deg, 
+                    transparent 0deg,
+                    rgba(99, 102, 241, 0.3) 60deg,
+                    rgba(139, 92, 246, 0.4) 120deg,
+                    rgba(6, 182, 212, 0.3) 180deg,
+                    rgba(99, 102, 241, 0.2) 240deg,
+                    transparent 300deg,
+                    transparent 360deg
+                );
+            }
+            100% { background-image: 
+                linear-gradient(var(--glass-bg), var(--glass-bg)),
+                conic-gradient(from 360deg, 
+                    transparent 0deg,
+                    rgba(99, 102, 241, 0.3) 60deg,
+                    rgba(139, 92, 246, 0.4) 120deg,
+                    rgba(6, 182, 212, 0.3) 180deg,
+                    rgba(99, 102, 241, 0.2) 240deg,
+                    transparent 300deg,
+                    transparent 360deg
+                );
+            }
+        }
+
+        .upload-visual {
+            margin-bottom: 2rem;
+        }
+
+        .upload-circle {
+            position: relative;
+            width: 80px;
+            height: 80px;
+            border: 1px solid transparent;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: 
+                linear-gradient(var(--glass-bg), var(--glass-bg)),
+                radial-gradient(circle, 
+                    rgba(99, 102, 241, 0.2) 0%,
+                    rgba(139, 92, 246, 0.1) 50%,
+                    transparent 100%
+                );
+            background-origin: border-box;
+            background-clip: padding-box, border-box;
+            animation: circlePulse 4s ease-in-out infinite;
+        }
+
+        @keyframes circlePulse {
+            0%, 100% { 
+                transform: scale(1);
+                box-shadow: 
+                    0 0 20px rgba(99, 102, 241, 0.1),
+                    inset 0 0 20px rgba(99, 102, 241, 0.05);
+            }
+            50% { 
+                transform: scale(1.05);
+                box-shadow: 
+                    0 0 30px rgba(139, 92, 246, 0.2),
+                    inset 0 0 30px rgba(139, 92, 246, 0.1);
+            }
+        }
+
+
+        .upload-hint {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            font-weight: 300;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        /* Help Trigger - Flotante */
+        .help-trigger {
+            position: absolute;
+            top: -20px;
+            right: -20px;
+            width: 50px;
+            height: 50px;
+            border: 1px solid var(--border-glass);
+            border-radius: 50%;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: floatHelp 3s ease-in-out infinite;
+        }
+
+        .help-trigger:hover {
+            border-color: var(--accent-tertiary);
+            box-shadow: var(--glow-tertiary);
+            transform: scale(1.1);
+        }
+
+        .help-icon {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            font-weight: 300;
+        }
+
+        @keyframes floatHelp {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-5px); }
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        /* Progress bar minimalista */
+        .progress-container {
+            display: none;
+            margin-top: 2rem;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 1px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+            width: 0%;
+            transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 1px;
+            position: relative;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            animation: progressShimmer 1.5s ease-in-out infinite;
+        }
+
+        @keyframes progressShimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .progress-text {
+            text-align: center;
+            margin-top: 1rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            font-weight: 300;
+        }
+
+        /* Modal tutorial minimalista */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            backdrop-filter: blur(20px);
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--glass-bg);
+            backdrop-filter: blur(30px);
+            border: 1px solid var(--border-glass);
+            border-radius: 20px;
+            padding: 2.5rem;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .modal-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.3rem;
+            color: var(--text-primary);
+            font-weight: 300;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: color 0.3s ease;
+            padding: 0.5rem;
+        }
+
+        .close-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .tutorial-steps {
+            list-style: none;
+            counter-reset: step-counter;
+        }
+
+        .tutorial-steps li {
+            counter-increment: step-counter;
+            margin-bottom: 1.5rem;
+            padding-left: 2rem;
+            position: relative;
+        }
+
+        .tutorial-steps li::before {
+            content: counter(step-counter);
+            position: absolute;
+            left: 0;
+            top: 0;
+            background: var(--accent-primary);
+            color: var(--text-primary);
+            width: 1.5rem;
+            height: 1.5rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 300;
+            font-size: 0.8rem;
+        }
+
+        .step-title {
+            font-weight: 300;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .step-description {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 300;
+            line-height: 1.5;
+        }
+
+        /* Error/Success messages minimalistas */
+        .message {
+            padding: 1rem;
+            border-radius: 12px;
+            margin-top: 1rem;
+            display: none;
+            backdrop-filter: blur(10px);
+            font-weight: 300;
+            font-size: 0.9rem;
+        }
+
+        .message.error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+        }
+
+        .message.success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #10b981;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 2rem 1rem;
+            }
+            
+            .title {
+                font-size: 2.2rem;
+            }
+            
+            .main-card {
+                padding: 2rem;
+                max-width: 100%;
+            }
+            
+            .upload-area {
+                padding: 2rem 1rem;
+            }
+            
+            .modal-content {
+                padding: 2rem;
+                max-width: 95%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="background"></div>
+    
+    <div class="container">
+        <div class="header">
+            <h1 class="title">ChatGPT Data Explorer</h1>
+            <h1 class="title">Analyze Your Conversations</h1>
+            <h1 class="title">Discover Hidden Patterns</h1>
+            <h1 class="title">Visualize Your Insights</h1>
+            <h1 class="title">Explore Your Data</h1>
+            <h1 class="title">Uncover AI Interactions</h1>
+            <h1 class="title">Transform Data Into Art</h1>
+            <h1 class="title">Decode Your Digital Mind</h1>
+            <h1 class="title">AI Conversation Analytics</h1>
+            <h1 class="title">Data Visualization</h1>
+            <h1 class="title">Pattern Recognition</h1>
+            <h1 class="title">Digital Insights</h1>
+            <h1 class="title">ChatGPT Analysis</h1>
+            <h1 class="title">Conversation Patterns</h1>
+            <h1 class="title">AI Data Explorer</h1>
+            <h1 class="title">Smart Analytics</h1>
+        </div>
+
+        <div class="experience-container">
+            <div class="particles">
+                <div class="particle"></div>
+                <div class="particle"></div>
+                <div class="particle"></div>
+                <div class="particle"></div>
+                <div class="particle"></div>
+                <div class="particle"></div>
+                <div class="particle"></div>
+            </div>
+            
+            <div class="upload-zone" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+                <div class="upload-hint">Drop your ChatGPT export</div>
+                <input type="file" id="fileInput" class="file-input" accept=".zip" onchange="handleFileSelect(event)">
+            </div>
+
+            <div class="help-trigger" onclick="openTutorial()">
+                <div class="help-icon">?</div>
+            </div>
+        </div>
+
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text" id="progressText">Procesando archivo...</div>
+            </div>
+
+            <div class="message error" id="errorMessage"></div>
+            <div class="message success" id="successMessage"></div>
+        </div>
+    </div>
+
+    <!-- Modal Tutorial -->
+    <div class="modal" id="tutorialModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Cómo exportar tus datos de ChatGPT</h2>
+                <button class="close-btn" onclick="closeTutorial()">&times;</button>
+            </div>
+            <ol class="tutorial-steps">
+                <li>
+                    <div class="step-title">Accede a ChatGPT</div>
+                    <div class="step-description">Ve a chat.openai.com e inicia sesión en tu cuenta</div>
+                </li>
+                <li>
+                    <div class="step-title">Abre Configuración</div>
+                    <div class="step-description">Haz clic en tu nombre de usuario en la esquina inferior izquierda y selecciona "Settings"</div>
+                </li>
+                <li>
+                    <div class="step-title">Ve a Data Controls</div>
+                    <div class="step-description">En el menú lateral, selecciona "Data Controls"</div>
+                </li>
+                <li>
+                    <div class="step-title">Exporta tus datos</div>
+                    <div class="step-description">Haz clic en "Export data" y luego en "Confirm export". Recibirás un email con el enlace de descarga</div>
+                </li>
+                <li>
+                    <div class="step-title">Descarga el archivo</div>
+                    <div class="step-description">Abre el email y descarga el archivo ZIP que contiene todos tus datos</div>
+                </li>
+                <li>
+                    <div class="step-title">¡Listo!</div>
+                    <div class="step-description">Ahora puedes subir ese archivo ZIP aquí para analizar tus conversaciones</div>
+                </li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        let currentFile = null;
+
+        // Drag and drop functionality
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        }
+
+        function handleFile(file) {
+            if (!file.name.toLowerCase().endsWith('.zip')) {
+                showError('Por favor, selecciona un archivo ZIP válido');
+                return;
+            }
+
+            if (file.size > 500 * 1024 * 1024) { // 500MB limit
+                showError('El archivo es demasiado grande. Máximo 500MB');
+                return;
+            }
+
+            currentFile = file;
+            uploadFile(file);
+        }
+
+        function uploadFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const progressContainer = document.getElementById('progressContainer');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+
+            progressContainer.style.display = 'block';
+            hideMessages();
+
+            // Simulate progress
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += Math.random() * 15;
+                if (progress > 90) progress = 90;
+                progressFill.style.width = progress + '%';
+            }, 200);
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                clearInterval(progressInterval);
+                progressFill.style.width = '100%';
+                progressText.textContent = '¡Procesamiento completado!';
+
+                if (data.success) {
+                    setTimeout(() => {
+                        window.location.href = `/report?session_id=${data.session_id}`;
+                    }, 1000);
+                } else {
+                    showError(data.error || 'Error al procesar el archivo');
+                }
+            })
+            .catch(error => {
+                clearInterval(progressInterval);
+                console.error('Error:', error);
+                showError('Error de conexión. Intenta nuevamente.');
+            });
+        }
+
+        function openTutorial() {
+            document.getElementById('tutorialModal').style.display = 'block';
+        }
+
+        function closeTutorial() {
+            document.getElementById('tutorialModal').style.display = 'none';
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            document.getElementById('progressContainer').style.display = 'none';
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.getElementById('successMessage');
+            successDiv.textContent = message;
+            successDiv.style.display = 'block';
+        }
+
+        function hideMessages() {
+            document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('successMessage').style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('tutorialModal');
+            if (event.target === modal) {
+                closeTutorial();
+            }
+        }
+
+        // Animar partículas con movimiento aleatorio
+        function animateParticles() {
+            const particles = document.querySelectorAll('.particle');
+            particles.forEach((particle, index) => {
+                const randomX = (Math.random() - 0.5) * 100;
+                const randomY = (Math.random() - 0.5) * 100;
+                particle.style.setProperty('--random-x', `${randomX}px`);
+                particle.style.setProperty('--random-y', `${randomY}px`);
+            });
+        }
+
+        // Inicializar animación de partículas
+        animateParticles();
+        setInterval(animateParticles, 8000);
+    </script>
+</body>
+</html>

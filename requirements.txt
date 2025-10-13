@@ -1,4 +1,8 @@
-# ChatGPT Analytics Pro - Dependencias
+# ChatGPT Data Explorer - Dependencias para Vercel
+
+# Flask para el servidor web
+Flask>=2.3.0
+Werkzeug>=2.3.0
 
 # Procesamiento de texto y análisis de sentimientos
 textblob>=0.17.1
@@ -8,5 +12,8 @@ nltk>=3.8.1
 pandas>=1.5.0
 numpy>=1.24.0
 
-# Utilidades adicionales (opcionales)
+# Utilidades adicionales
 python-dateutil>=2.8.2
+pytz>=2020.1
+tzdata>=2022.7
+six>=1.5
