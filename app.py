@@ -33,57 +33,90 @@ def index():
 @app.route('/upload', methods=['POST'])
 def upload_file():
     """Procesar archivo ZIP subido"""
+    print("🚀 Iniciando upload de archivo...")
+    
     try:
         if 'file' not in request.files:
+            print("❌ No se encontró archivo en la request")
             return jsonify({'success': False, 'error': 'No se encontró archivo'})
         
         file = request.files['file']
         if file.filename == '':
+            print("❌ No se seleccionó archivo")
             return jsonify({'success': False, 'error': 'No se seleccionó archivo'})
         
         if not file.filename.lower().endswith('.zip'):
+            print("❌ Archivo no es .zip")
             return jsonify({'success': False, 'error': 'El archivo debe ser un ZIP'})
+        
+        print(f"📁 Archivo recibido: {file.filename}")
         
         # Generar ID único para la sesión
         session_id = str(uuid.uuid4())
         session_dir = os.path.join(TEMP_DIR, session_id)
         os.makedirs(session_dir, exist_ok=True)
+        print(f"📂 Directorio temporal creado: {session_dir}")
         
         # Guardar archivo temporalmente
         zip_path = os.path.join(session_dir, 'chatgpt_export.zip')
+        print(f"💾 Guardando archivo en: {zip_path}")
         file.save(zip_path)
+        
+        # Verificar tamaño del archivo
+        file_size = os.path.getsize(zip_path)
+        print(f"📊 Tamaño del archivo: {file_size / (1024*1024):.2f} MB")
         
         # Extraer ZIP
         extract_dir = os.path.join(session_dir, 'extracted')
         os.makedirs(extract_dir, exist_ok=True)
+        print(f"📦 Extrayendo ZIP a: {extract_dir}")
         
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             zip_ref.extractall(extract_dir)
+        
+        print("✅ ZIP extraído exitosamente")
         
         # Buscar archivos necesarios
         conversations_file = None
         user_file = None
         
+        print("🔍 Buscando archivos de conversaciones...")
         for root, dirs, files in os.walk(extract_dir):
             for file in files:
                 if file == 'conversations.json':
                     conversations_file = os.path.join(root, file)
+                    print(f"✅ Encontrado conversations.json: {conversations_file}")
                 elif file == 'user.json':
                     user_file = os.path.join(root, file)
+                    print(f"✅ Encontrado user.json: {user_file}")
         
         if not conversations_file:
+            print("❌ No se encontró conversations.json")
             return jsonify({'success': False, 'error': 'No se encontró conversations.json en el ZIP'})
         
+        # Verificar tamaño de conversations.json
+        conv_size = os.path.getsize(conversations_file)
+        print(f"📊 Tamaño de conversations.json: {conv_size / (1024*1024):.2f} MB")
+        
         # Procesar datos
+        print("⚙️ Iniciando procesamiento de datos...")
         parser = ChatGPTParser()
+        
+        import time
+        start_time = time.time()
         stats = parser.parse_and_analyze(conversations_file, user_file)
+        end_time = time.time()
+        
+        print(f"✅ Procesamiento completado en {end_time - start_time:.2f} segundos")
         
         # Guardar estadísticas en la sesión
         stats_file = os.path.join(session_dir, 'stats.json')
+        print(f"💾 Guardando estadísticas en: {stats_file}")
         with open(stats_file, 'w', encoding='utf-8') as f:
             json.dump(stats, f, ensure_ascii=False, indent=2)
         
         # Copiar archivos necesarios para el reporte
+        print("📄 Copiando reporte HTML...")
         shutil.copy2('advanced_report.html', os.path.join(session_dir, 'report.html'))
         
         # Guardar información de la sesión
@@ -94,6 +127,8 @@ def upload_file():
             'extract_dir': extract_dir
         }
         
+        print(f"🎉 Upload completado exitosamente. Session ID: {session_id}")
+        
         return jsonify({
             'success': True, 
             'session_id': session_id,
@@ -101,7 +136,9 @@ def upload_file():
         })
         
     except Exception as e:
-        print(f"Error procesando archivo: {str(e)}")
+        print(f"❌ Error procesando archivo: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'error': f'Error interno: {str(e)}'})
 
 @app.route('/report')

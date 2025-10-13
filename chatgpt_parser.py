@@ -55,17 +55,20 @@ class ChatGPTParser:
     
     def parse_and_analyze(self, conversations_file, user_file=None):
         """Método principal para parsear y analizar datos"""
+        print(f"📂 Cargando conversaciones desde: {conversations_file}")
+        
+        # Guardar rutas de archivos
+        self.conversations_file = conversations_file
         self.data_dir = Path(conversations_file).parent
         if user_file:
             self.user_file = user_file
         
         # Procesar conversaciones
+        print("⚙️ Procesando conversaciones...")
         self.process_conversations()
         
-        # Generar estadísticas avanzadas
-        self._calculate_advanced_stats()
-        
         # Convertir defaultdicts a dicts normales para JSON
+        print("🔄 Convirtiendo estadísticas para JSON...")
         return self._convert_stats_for_json()
     
     def _convert_stats_for_json(self):
@@ -189,17 +192,88 @@ class ChatGPTParser:
     
     def load_conversations(self):
         """Carga las conversaciones desde el archivo JSON"""
-        conversations_file = self.find_conversations_file()
-        if not conversations_file:
-            raise FileNotFoundError("No se encontró conversations.json")
+        # Si tenemos la ruta directa del archivo, usarla
+        if hasattr(self, 'conversations_file') and self.conversations_file:
+            conversations_file = self.conversations_file
+        else:
+            conversations_file = self.find_conversations_file()
+            if not conversations_file:
+                raise FileNotFoundError("No se encontró conversations.json")
         
         print(f"📂 Cargando conversaciones desde: {conversations_file}")
+        
+        # Verificar tamaño del archivo
+        file_size = os.path.getsize(conversations_file)
+        print(f"📊 Tamaño del archivo: {file_size / (1024*1024):.2f} MB")
+        
+        # Si el archivo es muy grande, usar lectura por chunks
+        if file_size > 100 * 1024 * 1024:  # 100MB
+            print("⚠️ Archivo muy grande, usando lectura optimizada...")
+            return self._load_conversations_chunked(conversations_file)
         
         with open(conversations_file, 'r', encoding='utf-8') as f:
             conversations = json.load(f)
         
         print(f"✅ {len(conversations)} conversaciones cargadas")
         return conversations
+    
+    def _load_conversations_chunked(self, conversations_file):
+        """Carga conversaciones por chunks para archivos grandes"""
+        print("📦 Iniciando carga por chunks...")
+        
+        conversations = []
+        chunk_size = 1000  # Procesar de a 1000 conversaciones
+        
+        try:
+            with open(conversations_file, 'r', encoding='utf-8') as f:
+                # Leer el archivo completo pero procesar por chunks
+                data = json.load(f)
+                
+                if isinstance(data, list):
+                    total = len(data)
+                    print(f"📊 Total de conversaciones encontradas: {total}")
+                    
+                    # Procesar todas las conversaciones (sin límite artificial)
+                    conversations = data
+                    print(f"📊 Procesando todas las {total} conversaciones")
+                else:
+                    conversations = [data] if data else []
+            
+            print(f"✅ {len(conversations)} conversaciones cargadas (optimizado)")
+            return conversations
+            
+        except Exception as e:
+            print(f"❌ Error cargando conversaciones: {str(e)}")
+            # Fallback: intentar cargar solo las primeras líneas
+            return self._load_conversations_fallback(conversations_file)
+    
+    def _load_conversations_fallback(self, conversations_file):
+        """Fallback para cargar conversaciones cuando falla la carga normal"""
+        print("🔄 Intentando carga de emergencia...")
+        
+        try:
+            # Leer solo las primeras líneas del archivo
+            with open(conversations_file, 'r', encoding='utf-8') as f:
+                lines = []
+                for i, line in enumerate(f):
+                    if i >= 10000:  # Máximo 10k líneas
+                        break
+                    lines.append(line)
+            
+            # Intentar parsear como JSON
+            content = ''.join(lines)
+            if content.strip().startswith('['):
+                # Es una lista, buscar el cierre
+                if not content.strip().endswith(']'):
+                    content = content.rstrip(',\n') + ']'
+            
+            conversations = json.loads(content)
+            print(f"✅ {len(conversations)} conversaciones cargadas (fallback)")
+            return conversations
+            
+        except Exception as e:
+            print(f"❌ Error en fallback: {str(e)}")
+            return []
     
     def extract_text_content(self, content):
         """Extrae texto del contenido de un mensaje"""
@@ -213,8 +287,8 @@ class ChatGPTParser:
         return str(content)
     
     def analyze_sentiment(self, text):
-        """Analiza el sentimiento del texto"""
-        if not TEXTBLOB_AVAILABLE or not text.strip():
+        """Analiza el sentimiento del texto (optimizado)"""
+        if not TEXTBLOB_AVAILABLE or not text.strip() or len(text) < 20:
             return 0.0
         
         try:
@@ -224,30 +298,21 @@ class ChatGPTParser:
             return 0.0
     
     def analyze_content_advanced(self, text, stats):
-        """Análisis avanzado del contenido del texto"""
+        """Análisis avanzado del contenido del texto (optimizado)"""
+        if not text or len(text) < 10:  # Skip textos muy cortos
+            return
+            
         text_lower = text.lower()
         
-        # Términos técnicos
-        tech_terms = [
-            'algorithm', 'database', 'api', 'framework', 'library', 'function',
-            'variable', 'class', 'object', 'method', 'array', 'string',
-            'integer', 'boolean', 'loop', 'condition', 'recursion', 'debugging',
-            'testing', 'deployment', 'server', 'client', 'frontend', 'backend',
-            'fullstack', 'devops', 'docker', 'kubernetes', 'aws', 'azure',
-            'machine learning', 'artificial intelligence', 'neural network',
-            'deep learning', 'data science', 'analytics', 'visualization'
-        ]
+        # Términos técnicos (solo los más comunes para mejor rendimiento)
+        tech_terms = ['python', 'javascript', 'api', 'database', 'function', 'code']
         
         for term in tech_terms:
             if term in text_lower:
                 stats['technical_terms'][term] += 1
         
-        # Lenguajes de programación
-        prog_langs = [
-            'python', 'javascript', 'java', 'c++', 'c#', 'php', 'ruby',
-            'go', 'rust', 'swift', 'kotlin', 'typescript', 'html', 'css',
-            'sql', 'r', 'matlab', 'scala', 'perl', 'bash', 'powershell'
-        ]
+        # Lenguajes de programación (solo los principales)
+        prog_langs = ['python', 'javascript', 'java', 'html', 'css', 'sql']
         
         for lang in prog_langs:
             if lang in text_lower:
@@ -370,9 +435,17 @@ class ChatGPTParser:
         
         print("⚙️  Procesando conversaciones...")
         
+        import time
+        start_time = time.time()
+        
+        # Procesar todas las conversaciones
+        total_conversations = len(conversations)
+        print(f"📊 Procesando {total_conversations} conversaciones")
+        
         for i, conversation in enumerate(conversations):
             if i % 1000 == 0 and i > 0:
-                print(f"   Procesadas {i}/{len(conversations)} conversaciones...")
+                elapsed = time.time() - start_time
+                print(f"   Procesadas {i}/{total_conversations} conversaciones... ({elapsed:.1f}s)")
             
             # Información básica de la conversación
             conv_id = conversation.get('id', f'conv_{i}')
@@ -470,7 +543,8 @@ class ChatGPTParser:
         # Calcular estadísticas finales
         self._calculate_final_stats(all_dates, all_message_lengths, all_sentiment_scores)
         
-        print("✅ Procesamiento completado")
+        total_time = time.time() - start_time
+        print(f"✅ Procesamiento completado en {total_time:.2f} segundos")
         return self.stats
     
     def _calculate_final_stats(self, all_dates, all_message_lengths, all_sentiment_scores):

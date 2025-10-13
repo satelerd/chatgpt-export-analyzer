@@ -1410,6 +1410,21 @@
                 }
                 statsData = await response.json();
                 
+                // Validar que los datos básicos existen
+                if (!statsData) {
+                    throw new Error('Datos de estadísticas vacíos');
+                }
+                
+                // Asegurar que las propiedades básicas existen
+                statsData.total_conversations = statsData.total_conversations || 0;
+                statsData.total_messages = statsData.total_messages || 0;
+                statsData.total_words = statsData.total_words || 0;
+                statsData.avg_conversation_length = statsData.avg_conversation_length || 0;
+                statsData.avg_message_length = statsData.avg_message_length || 0;
+                statsData.most_active_day = statsData.most_active_day || 'N/A';
+                
+                console.log('📊 Datos cargados:', statsData);
+                
                 // Actualizar preview del header
                 updateHeaderPreview();
                 
@@ -1453,7 +1468,7 @@
             document.getElementById('total-words').textContent = 
                 formatNumber(statsData.total_words);
             document.getElementById('avg-conversation').textContent = 
-                Math.round(statsData.avg_conversation_length);
+                Math.round(statsData.avg_conversation_length || 0);
             document.getElementById('avg-message-length').textContent = 
                 Math.round(statsData.avg_message_length || 0);
             document.getElementById('most-active-day').textContent = 
@@ -1466,14 +1481,23 @@
                 document.getElementById('inactive-days').textContent = 
                     formatNumber(statsData.days_analysis.inactive_days);
                 document.getElementById('active-percentage').textContent = 
-                    statsData.days_analysis.active_percentage + '%';
+                    (statsData.days_analysis.active_percentage || 0) + '%';
                 document.getElementById('longest-streak').textContent = 
                     formatNumber(statsData.days_analysis.longest_active_streak);
+            } else {
+                // Valores por defecto si no hay análisis de días
+                document.getElementById('active-days').textContent = '0';
+                document.getElementById('inactive-days').textContent = '0';
+                document.getElementById('active-percentage').textContent = '0%';
+                document.getElementById('longest-streak').textContent = '0';
             }
         }
 
         // Formatear números
         function formatNumber(num) {
+            if (num === null || num === undefined || isNaN(num)) {
+                return '0';
+            }
             if (num >= 1000000) {
                 return (num / 1000000).toFixed(1) + 'M';
             } else if (num >= 1000) {
@@ -1490,7 +1514,12 @@
             loading.style.display = 'none';
             chartsContainer.style.display = 'block';
 
-            githubData = statsData.github_style_data;
+            githubData = statsData.github_style_data || [];
+            
+            if (!githubData || githubData.length === 0) {
+                console.log('⚠️ No hay datos de GitHub style, generando desde daily_activity...');
+                githubData = generateGitHubDataFromDailyActivity(statsData.daily_activity || {});
+            }
             
             // Organizar datos por año
             const dataByYear = organizeDataByYear(githubData);
@@ -1589,9 +1618,40 @@
             });
         }
 
+        // Generar datos de GitHub style desde daily_activity
+        function generateGitHubDataFromDailyActivity(dailyActivity) {
+            const githubData = [];
+            
+            // Obtener rango de fechas
+            const dates = Object.keys(dailyActivity).sort();
+            if (dates.length === 0) return githubData;
+            
+            const startDate = new Date(dates[0]);
+            const endDate = new Date(dates[dates.length - 1]);
+            
+            // Generar datos para cada día en el rango
+            for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+                const dateStr = d.toISOString().split('T')[0];
+                const count = dailyActivity[dateStr] || 0;
+                
+                githubData.push({
+                    date: dateStr,
+                    count: count,
+                    level: Math.min(4, Math.floor(count / 5)) // 0-4 levels
+                });
+            }
+            
+            return githubData;
+        }
+
         // Organizar datos por año
         function organizeDataByYear(data) {
             const dataByYear = {};
+            
+            if (!data || !Array.isArray(data)) {
+                console.log('⚠️ Datos no válidos para organizeDataByYear:', data);
+                return dataByYear;
+            }
             
             data.forEach(day => {
                 const year = day.date.split('-')[0];

@@ -592,7 +592,7 @@
 
         .upload-hint {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 0.9rem;
+            font-size: 1.4rem;
             color: var(--text-muted);
             font-weight: 300;
             letter-spacing: 0.05em;
@@ -648,22 +648,24 @@
 
         .progress-bar {
             width: 100%;
-            height: 2px;
+            height: 20px;
             background: rgba(255, 255, 255, 0.1);
-            border-radius: 1px;
+            border-radius: 10px;
             overflow: hidden;
             position: relative;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         .progress-fill {
             height: 100%;
             background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
             width: 0%;
-            transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            border-radius: 1px;
+            transition: width 0.3s ease-out;
+            border-radius: 10px;
             position: relative;
+            box-shadow: 0 0 10px rgba(99, 102, 241, 0.3);
         }
-
+        
         .progress-fill::after {
             content: '';
             position: absolute;
@@ -671,11 +673,11 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-            animation: progressShimmer 1.5s ease-in-out infinite;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            animation: progressShine 2s infinite;
         }
-
-        @keyframes progressShimmer {
+        
+        @keyframes progressShine {
             0% { transform: translateX(-100%); }
             100% { transform: translateX(100%); }
         }
@@ -978,6 +980,8 @@
         }
 
         function uploadFile(file) {
+            console.log('🚀 Iniciando upload de archivo:', file.name, 'Tamaño:', (file.size / (1024*1024)).toFixed(2), 'MB');
+            
             const formData = new FormData();
             formData.append('file', file);
 
@@ -987,36 +991,96 @@
 
             progressContainer.style.display = 'block';
             hideMessages();
+            
+            console.log('📤 Enviando request a /upload...');
 
-            // Simulate progress
+            // Progress tracking with real upload estimation
+            let uploadStartTime = Date.now();
+            let lastProgressTime = uploadStartTime;
+            let lastProgressBytes = 0;
+            let estimatedTotalTime = 0;
+            let progressInterval;
+            
+            // Update progress text with estimation
+            function updateProgressText(progress, estimatedTime) {
+                const minutes = Math.floor(estimatedTime / 60);
+                const seconds = Math.floor(estimatedTime % 60);
+                const timeStr = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+                progressText.textContent = `Subiendo... ${progress.toFixed(1)}% - Tiempo estimado: ${timeStr}`;
+            }
+            
+            // Realistic progress simulation based on file size
+            const fileSizeMB = file.size / (1024 * 1024);
+            const baseSpeed = 3; // MB/s base speed (more conservative)
+            const estimatedUploadTime = fileSizeMB / baseSpeed; // seconds
+            
             let progress = 0;
-            const progressInterval = setInterval(() => {
-                progress += Math.random() * 15;
-                if (progress > 90) progress = 90;
-                progressFill.style.width = progress + '%';
-            }, 200);
+            let lastProgress = 0;
+            progressInterval = setInterval(() => {
+                const elapsed = (Date.now() - uploadStartTime) / 1000;
+                const progressRate = Math.min(elapsed / estimatedUploadTime, 0.92); // Max 92% until completion
+                
+                // Smooth progress increment (no decreases)
+                const targetProgress = progressRate;
+                if (targetProgress > lastProgress) {
+                    progress = Math.min(targetProgress, 0.92);
+                    lastProgress = progress;
+                }
+                
+                progressFill.style.width = progress * 100 + '%';
+                
+                // Calculate remaining time
+                const remainingTime = Math.max(0, estimatedUploadTime - elapsed);
+                
+                // Show special message when time reaches 0
+                if (remainingTime <= 0) {
+                    progressText.textContent = 'Solo faltan estos últimos detalles que pueden demorar un poco...';
+                } else {
+                    updateProgressText(progress * 100, remainingTime);
+                }
+            }, 800);
 
+            const startTime = Date.now();
             fetch('/upload', {
                 method: 'POST',
                 body: formData
             })
-            .then(response => response.json())
+            .then(response => {
+                const elapsed = (Date.now() - startTime) / 1000;
+                console.log(`✅ Response recibida en ${elapsed}s - Status:`, response.status);
+                console.log('Response headers:', response.headers);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
+                const totalTime = (Date.now() - startTime) / 1000;
+                console.log(`🎉 Upload completado en ${totalTime}s - Response:`, data);
                 clearInterval(progressInterval);
                 progressFill.style.width = '100%';
-                progressText.textContent = '¡Procesamiento completado!';
+                progressText.textContent = `¡Completado en ${totalTime.toFixed(1)}s!`;
 
                 if (data.success) {
+                    // Show processing phase
+                    progressText.textContent = 'Procesando datos...';
+                    progressFill.style.background = 'linear-gradient(90deg, #10b981, #059669)';
+                    
                     setTimeout(() => {
                         window.location.href = `/report?session_id=${data.session_id}`;
-                    }, 1000);
+                    }, 2000);
                 } else {
                     showError(data.error || 'Error al procesar el archivo');
                 }
             })
             .catch(error => {
                 clearInterval(progressInterval);
-                console.error('Error:', error);
+                console.error('Upload error:', error);
+                console.error('Error details:', {
+                    message: error.message,
+                    stack: error.stack,
+                    name: error.name
+                });
                 showError('Error de conexión. Intenta nuevamente.');
             });
         }
