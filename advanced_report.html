@@ -487,38 +487,6 @@
             box-shadow: 0 0 20px rgba(0, 255, 65, 0.8);
         }
 
-        /* Heatmap de actividad */
-        .heatmap-container {
-            background: linear-gradient(135deg, var(--secondary-bg) 0%, var(--accent-bg) 100%);
-            border: 2px solid var(--border-color);
-            border-radius: 20px;
-            padding: 3rem;
-            margin: 3rem 0;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .heatmap {
-            display: grid;
-            grid-template-columns: repeat(24, 1fr);
-            gap: 2px;
-            margin-top: 2rem;
-        }
-
-        .heatmap-cell {
-            width: 12px;
-            height: 12px;
-            border-radius: 2px;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            position: relative;
-        }
-
-        .heatmap-cell:hover {
-            transform: scale(1.5);
-            z-index: 10;
-            box-shadow: 0 0 15px rgba(0, 212, 255, 0.8);
-        }
 
         /* Gráficos avanzados */
         .charts-grid {
@@ -554,6 +522,15 @@
 
         .chart-container canvas {
             max-height: 400px;
+        }
+
+        .chart-container.full-width {
+            width: 100%;
+            margin: 3rem 0;
+        }
+
+        .chart-container.full-width canvas {
+            max-height: 500px;
         }
 
         /* Análisis de sentimientos */
@@ -1186,17 +1163,13 @@
                 </div>
             </div>
 
-            <!-- Heatmap de actividad -->
-            <div class="heatmap-container">
-                <h3 class="chart-title">Heatmap de Actividad (Día vs Hora)</h3>
-                <div class="loading" id="heatmap-loading">
-                    <div class="spinner"></div>
-                    <div class="loading-text">Generando heatmap...</div>
-                </div>
-                <div class="heatmap" id="heatmap" style="display: none;"></div>
-            </div>
 
             <!-- Gráficos de actividad -->
+            <div class="chart-container full-width">
+                <h3>Conversaciones Diarias</h3>
+                <canvas id="cumulative-chart"></canvas>
+            </div>
+            
             <div class="charts-grid">
                 <div class="chart-container">
                     <h3>Actividad por Hora del Día</h3>
@@ -1206,21 +1179,6 @@
                 <div class="chart-container">
                     <h3>Actividad Mensual</h3>
                     <canvas id="monthly-chart"></canvas>
-                </div>
-                
-                <div class="chart-container">
-                    <h3>Actividad por Día de la Semana</h3>
-                    <canvas id="weekly-chart"></canvas>
-                </div>
-                
-                <div class="chart-container">
-                    <h3>Evolución Temporal</h3>
-                    <canvas id="timeline-chart"></canvas>
-                </div>
-                
-                <div class="chart-container">
-                    <h3>Evolución Acumulada</h3>
-                    <canvas id="cumulative-chart"></canvas>
                 </div>
             </div>
         </section>
@@ -1449,11 +1407,8 @@
                 
                 // Crear visualizaciones
                 createGitHubChart();
-                createHeatmap();
                 createHourlyChart();
                 createMonthlyChart();
-                createWeeklyChart();
-                createTimelineChart();
                 createCumulativeChart();
                 createSentimentCharts();
                 createWordCloud();
@@ -1664,74 +1619,6 @@
             return weeks;
         }
 
-        // Crear heatmap
-        function createHeatmap() {
-            const loading = document.getElementById('heatmap-loading');
-            const heatmap = document.getElementById('heatmap');
-            
-            loading.style.display = 'none';
-            heatmap.style.display = 'grid';
-
-            const heatmapData = statsData.heatmap_data;
-            const days = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-            
-            // Crear etiquetas de días
-            for (let day = 0; day < 7; day++) {
-                const dayLabel = document.createElement('div');
-                dayLabel.textContent = days[day];
-                dayLabel.style.gridColumn = '1';
-                dayLabel.style.gridRow = day + 2;
-                dayLabel.style.display = 'flex';
-                dayLabel.style.alignItems = 'center';
-                dayLabel.style.justifyContent = 'center';
-                dayLabel.style.color = 'var(--text-secondary)';
-                dayLabel.style.fontSize = '0.8rem';
-                heatmap.appendChild(dayLabel);
-            }
-            
-            // Crear etiquetas de horas
-            for (let hour = 0; hour < 24; hour++) {
-                const hourLabel = document.createElement('div');
-                hourLabel.textContent = hour;
-                hourLabel.style.gridColumn = hour + 2;
-                hourLabel.style.gridRow = '1';
-                hourLabel.style.display = 'flex';
-                hourLabel.style.alignItems = 'center';
-                hourLabel.style.justifyContent = 'center';
-                hourLabel.style.color = 'var(--text-secondary)';
-                hourLabel.style.fontSize = '0.7rem';
-                heatmap.appendChild(hourLabel);
-            }
-            
-            // Crear celdas del heatmap
-            for (let day = 0; day < 7; day++) {
-                for (let hour = 0; hour < 24; hour++) {
-                    const cell = document.createElement('div');
-                    cell.className = 'heatmap-cell';
-                    cell.style.gridColumn = hour + 2;
-                    cell.style.gridRow = day + 2;
-                    
-                    const count = heatmapData[day]?.[hour] || 0;
-                    const intensity = Math.min(count / 10, 1); // Normalizar a 0-1
-                    
-                    // Color basado en intensidad
-                    const hue = 200 + (intensity * 160); // De azul a verde
-                    const saturation = 70 + (intensity * 30);
-                    const lightness = 20 + (intensity * 30);
-                    
-                    cell.style.backgroundColor = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-                    cell.title = `${days[day]} ${hour}:00 - ${count} conversaciones`;
-                    
-                    cell.addEventListener('mouseenter', (e) => {
-                        showTooltip(e, `${days[day]} ${hour}:00`, `${count} conversaciones`);
-                    });
-                    
-                    cell.addEventListener('mouseleave', hideTooltip);
-                    
-                    heatmap.appendChild(cell);
-                }
-            }
-        }
 
         // Crear gráfico de actividad por hora
         function createHourlyChart() {
@@ -1844,102 +1731,7 @@
             });
         }
 
-        // Crear gráfico de actividad semanal
-        function createWeeklyChart() {
-            const ctx = document.getElementById('weekly-chart').getContext('2d');
-            const weeklyData = statsData.weekly_activity;
-            
-            const labels = Object.keys(weeklyData).sort();
-            const data = labels.map(week => weeklyData[week]);
-            
-            new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        data: data,
-                        backgroundColor: [
-                            '#00ff41', '#00d4ff', '#b300ff', '#ff0080', '#ffff00',
-                            '#ff6b35', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57'
-                        ],
-                        borderColor: '#ffffff',
-                        borderWidth: 2,
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'right',
-                            labels: {
-                                color: '#ffffff',
-                                padding: 20,
-                                usePointStyle: true,
-                            }
-                        }
-                    }
-                }
-            });
-        }
 
-        // Crear gráfico de timeline
-        function createTimelineChart() {
-            const ctx = document.getElementById('timeline-chart').getContext('2d');
-            const timelineData = statsData.timeline_data;
-            
-            const labels = timelineData.map(item => item.date);
-            const data = timelineData.map(item => item.count);
-            
-            new Chart(ctx, {
-                type: 'scatter',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Conversaciones',
-                        data: data,
-                        backgroundColor: 'rgba(179, 0, 255, 0.6)',
-                        borderColor: '#b300ff',
-                        borderWidth: 2,
-                        pointRadius: 4,
-                        pointHoverRadius: 8,
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            labels: {
-                                color: '#ffffff'
-                            }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            type: 'time',
-                            time: {
-                                unit: 'day'
-                            },
-                            ticks: {
-                                color: '#cccccc'
-                            },
-                            grid: {
-                                color: '#333333'
-                            }
-                        },
-                        y: {
-                            ticks: {
-                                color: '#cccccc'
-                            },
-                            grid: {
-                                color: '#333333'
-                            }
-                        }
-                    }
-                }
-            });
-        }
 
         // Crear gráfico de evolución acumulada
         function createCumulativeChart() {
