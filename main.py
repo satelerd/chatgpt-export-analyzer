@@ -91,8 +91,8 @@ def create_report_html(stats_file, output_dir):
     
     # Reemplazar datos en el template
     report_html = template.replace(
-        'window.statsData = null;',
-        f'window.statsData = {json.dumps(stats, default=str, ensure_ascii=False)};'
+        'let statsData = null;',
+        f'let statsData = {json.dumps(stats, default=str, ensure_ascii=False)};'
     )
     
     # Guardar reporte
