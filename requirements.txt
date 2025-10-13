@@ -1,19 +1,18 @@
-# ChatGPT Data Explorer - Dependencias para Vercel
+# ChatGPT Data Explorer - Dependencias
 
-# Flask para el servidor web
-Flask>=2.3.0
-Werkzeug>=2.3.0
-
-# Procesamiento de texto y análisis de sentimientos
-textblob>=0.17.1
-nltk>=3.8.1
+# Framework web
+Flask==2.3.3
+Werkzeug==2.3.7
 
 # Procesamiento de datos
-pandas>=1.5.0
-numpy>=1.24.0
+textblob==0.17.1
+nltk==3.8.1
 
-# Utilidades adicionales
-python-dateutil>=2.8.2
-pytz>=2020.1
-tzdata>=2022.7
-six>=1.5
+# Utilidades
+python-dateutil==2.8.2
+pathlib2==2.3.7
+
+# Desarrollo (opcional)
+pytest==7.4.2
+black==23.7.0
+flake8==6.0.0

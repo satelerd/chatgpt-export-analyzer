@@ -1,42 +1,59 @@
-# ChatGPT Analytics Pro - Configuración de Ejemplo
-# Copia este archivo a config.py y ajusta los valores según necesites
+#!/usr/bin/env python3
+"""
+ChatGPT Data Explorer - Configuración de ejemplo
+Copia este archivo a config.py y ajusta los valores según necesites
+"""
 
-# Configuración del servidor
-SERVER_CONFIG = {
-    'port': 8001,
-    'auto_open_browser': True,
-    'host': 'localhost'
-}
+import os
 
-# Configuración de análisis
-ANALYSIS_CONFIG = {
-    'enable_sentiment_analysis': True,
-    'enable_advanced_analysis': True,
-    'enable_audio_analysis': True,
-    'max_conversations': None,  # None para procesar todas
-    'chunk_size': 1000  # Procesar en chunks para datasets grandes
-}
+class Config:
+    """Configuración base"""
+    
+    # Servidor
+    PORT = int(os.environ.get('PORT', 5001))
+    DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
+    HOST = os.environ.get('HOST', '0.0.0.0')
+    
+    # Archivos
+    MAX_CONTENT_LENGTH = int(os.environ.get('MAX_FILE_SIZE', 500)) * 1024 * 1024  # MB a bytes
+    TEMP_DIR = os.environ.get('TEMP_DIR', '/tmp')
+    
+    # Análisis
+    ENABLE_SENTIMENT_ANALYSIS = os.environ.get('ENABLE_SENTIMENT_ANALYSIS', 'True').lower() == 'true'
+    ENABLE_ADVANCED_STATS = os.environ.get('ENABLE_ADVANCED_STATS', 'True').lower() == 'true'
+    MAX_CONVERSATIONS_LIMIT = int(os.environ.get('MAX_CONVERSATIONS_LIMIT', 10000))
+    
+    # Sesiones
+    SESSION_TIMEOUT = int(os.environ.get('SESSION_TIMEOUT', 3600))  # 1 hora
+    
+    # Logging
+    LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
+    
+    # Directorios
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    STATIC_DIR = os.path.join(BASE_DIR, 'static')
+    TEMPLATES_DIR = os.path.join(BASE_DIR, 'templates')
 
-# Configuración de visualizaciones
-VISUALIZATION_CONFIG = {
-    'chart_animation_duration': 1000,
-    'particle_count': 80,
-    'background_effects': True,
-    'neon_intensity': 1.0,
-    'glitch_effects': True
-}
+class DevelopmentConfig(Config):
+    """Configuración para desarrollo"""
+    DEBUG = True
+    LOG_LEVEL = 'DEBUG'
 
-# Configuración de archivos
-FILE_CONFIG = {
-    'data_dir': '.',
-    'output_file': 'chatgpt_stats.json',
-    'backup_stats': True,
-    'compress_output': False
-}
+class ProductionConfig(Config):
+    """Configuración para producción"""
+    DEBUG = False
+    LOG_LEVEL = 'WARNING'
 
-# Configuración de logging
-LOGGING_CONFIG = {
-    'level': 'INFO',
-    'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    'file': 'chatgpt_analytics.log'
+class TestingConfig(Config):
+    """Configuración para testing"""
+    TESTING = True
+    DEBUG = True
+    MAX_CONVERSATIONS_LIMIT = 100  # Límite bajo para tests
+
+# Configuración por defecto
+config = {
+    'development': DevelopmentConfig,
+    'production': ProductionConfig,
+    'testing': TestingConfig,
+    'default': DevelopmentConfig
 }

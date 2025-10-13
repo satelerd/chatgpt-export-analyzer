@@ -96,3 +96,8 @@ sample_data/
 
 # Datos precargados del usuario (NUNCA subir al repo)
 preloaded_data/
+
+# Archivos de configuración local
+config.py
+.env
+.env.local
