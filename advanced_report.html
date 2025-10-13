@@ -449,25 +449,28 @@
 
         .github-chart {
             display: grid;
-            grid-template-columns: 40px repeat(auto-fit, minmax(16px, 1fr));
-            grid-template-rows: repeat(7, 16px);
-            gap: 4px;
+            grid-template-columns: 30px 25px repeat(auto-fit, minmax(10px, 1fr));
+            grid-template-rows: repeat(7, 14px);
+            gap: 1px;
             justify-content: start;
             position: relative;
             z-index: 1;
+            width: 100%;
             max-width: 100%;
-            overflow-x: auto;
-            padding: 1rem;
+            padding: 0.5rem;
             align-items: center;
+            box-sizing: border-box;
         }
 
         .github-day {
-            width: 16px;
-            height: 16px;
+            width: 100%;
+            height: 100%;
             border-radius: 3px;
             transition: all 0.3s ease;
             cursor: pointer;
             position: relative;
+            min-width: 12px;
+            min-height: 12px;
         }
 
         .github-day.level-0 { background: #161b22; }
@@ -479,6 +482,29 @@
             background: linear-gradient(45deg, #ff6b35, #f7931e, #ffd700);
             animation: launch-glow 2s ease-in-out infinite alternate;
             box-shadow: 0 0 15px rgba(255, 107, 53, 0.8);
+            transform: scale(1.1);
+        }
+        
+        @keyframes launch-glow {
+            0% { box-shadow: 0 0 15px rgba(255, 107, 53, 0.8); }
+            100% { box-shadow: 0 0 25px rgba(255, 107, 53, 1); }
+        }
+        
+        .year-label {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            transform: rotate(180deg);
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--neon-yellow);
+            text-shadow: 0 0 10px rgba(255, 255, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            grid-column: 1;
+            grid-row: 1 / -1;
+            padding-left: 0.5rem;
         }
 
         .github-day:hover {
@@ -921,15 +947,41 @@
                 grid-template-columns: 1fr;
             }
             
+            /* GitHub Chart móvil - vista simplificada */
+            .github-charts-container {
+                padding: 1rem;
+                margin: 1rem 0;
+            }
+            
+            .year-chart-container {
+                margin: 1rem 0;
+                padding: 1rem;
+                background: rgba(0, 0, 0, 0.3);
+                border-radius: 10px;
+                border: 1px solid rgba(179, 0, 255, 0.3);
+            }
+            
             .github-chart {
                 gap: 3px;
-                grid-template-columns: 35px repeat(auto-fit, minmax(14px, 1fr));
-                grid-template-rows: repeat(7, 14px);
+                grid-template-columns: 30px 25px repeat(auto-fit, minmax(14px, 1fr));
+                grid-template-rows: repeat(7, 18px);
+                padding: 0.5rem;
+                width: 100%;
+                overflow-x: auto;
             }
             
             .github-day {
-                width: 14px;
-                height: 14px;
+                min-width: 14px;
+                min-height: 14px;
+                border-radius: 2px;
+            }
+            
+            .year-label {
+                font-size: 1rem;
+                writing-mode: vertical-rl;
+                text-orientation: mixed;
+                transform: rotate(180deg);
+                padding-left: 0.5rem;
             }
 
             .year-title {
@@ -1400,11 +1452,11 @@
                 const urlParams = new URLSearchParams(window.location.search);
                 const sessionId = urlParams.get('session_id');
                 
-                if (!sessionId) {
-                    throw new Error('No se encontró session_id en la URL');
-                }
+                console.log('🔍 Cargando datos para session_id:', sessionId || 'preloaded');
                 
-                const response = await fetch(`/api/stats?session_id=${sessionId}`);
+                // Cargar estadísticas (si no hay session_id, usar sesión precargada)
+                const statsUrl = sessionId ? `/api/stats?session_id=${sessionId}` : '/api/stats';
+                const response = await fetch(statsUrl);
                 if (!response.ok) {
                     throw new Error('Error cargando estadísticas');
                 }
@@ -1533,7 +1585,6 @@
                 const yearContainer = document.createElement('div');
                 yearContainer.className = 'year-chart-container';
                 yearContainer.innerHTML = `
-                    <h4 class="year-title">${year}</h4>
                     <div class="github-chart year-chart" id="github-chart-${year}"></div>
                 `;
                 
@@ -1548,6 +1599,12 @@
         function createYearChart(year, yearData) {
             const chart = document.getElementById(`github-chart-${year}`);
             
+            // Agregar etiqueta del año (rotada)
+            const yearLabel = document.createElement('div');
+            yearLabel.className = 'year-label';
+            yearLabel.textContent = year;
+            chart.appendChild(yearLabel);
+            
             // Organizar datos por semanas
             const weeksData = organizeDataByWeeks(yearData);
             
@@ -1558,7 +1615,7 @@
             dayLabels.forEach((dayLabel, index) => {
                 const labelElement = document.createElement('div');
                 labelElement.textContent = dayLabel;
-                labelElement.style.gridColumn = '1';
+                labelElement.style.gridColumn = '2';
                 labelElement.style.gridRow = index + 1;
                 labelElement.style.display = 'flex';
                 labelElement.style.alignItems = 'center';
@@ -1609,9 +1666,9 @@
                         dayElement.title = 'Sin actividad';
                     }
                     
-                    // Posicionar en el grid
-                    dayElement.style.gridColumn = weekIndex + 2; // +2 porque la primera columna son las etiquetas
-                    dayElement.style.gridRow = dayIndex + 1;
+                        // Posicionar en el grid
+                        dayElement.style.gridColumn = weekIndex + 3; // +3 porque: año + días + semanas
+                        dayElement.style.gridRow = dayIndex + 1;
                     
                     chart.appendChild(dayElement);
                 });
@@ -1629,16 +1686,29 @@
             const startDate = new Date(dates[0]);
             const endDate = new Date(dates[dates.length - 1]);
             
-            // Generar datos para cada día en el rango
-            for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-                const dateStr = d.toISOString().split('T')[0];
-                const count = dailyActivity[dateStr] || 0;
+            // Asegurar que mostramos años completos
+            const startYear = startDate.getFullYear();
+            const endYear = endDate.getFullYear();
+            
+            // Generar datos para cada año completo
+            for (let year = startYear; year <= endYear; year++) {
+                const yearStart = new Date(`${year}-01-01`);
+                const yearEnd = new Date(`${year}-12-31`);
                 
-                githubData.push({
-                    date: dateStr,
-                    count: count,
-                    level: Math.min(4, Math.floor(count / 5)) // 0-4 levels
-                });
+                for (let d = new Date(yearStart); d <= yearEnd; d.setDate(d.getDate() + 1)) {
+                    const dateStr = d.toISOString().split('T')[0];
+                    const count = dailyActivity[dateStr] || 0;
+                    
+                    // Marcar día de lanzamiento de ChatGPT
+                    const isLaunchDay = dateStr === '2022-11-30';
+                    
+                    githubData.push({
+                        date: dateStr,
+                        count: count,
+                        level: count === 0 ? 0 : Math.min(4, Math.floor(count / 3) + 1), // 0 para sin actividad, 1-4 según cantidad
+                        special_level: isLaunchDay ? 'launch' : null
+                    });
+                }
             }
             
             return githubData;
@@ -2305,7 +2375,8 @@
                     audio.controls = true;
                     const urlParams = new URLSearchParams(window.location.search);
                     const sessionId = urlParams.get('session_id');
-                    audio.src = `/api/audio/${randomAudioFile}?session_id=${sessionId}`;
+                    const audioUrl = sessionId ? `/api/audio/${randomAudioFile}?session_id=${sessionId}` : `/api/audio/${randomAudioFile}`;
+                    audio.src = audioUrl;
                     audio.style.width = '100%';
                     audio.style.marginTop = '1rem';
                     
@@ -2345,7 +2416,8 @@
                 if (!window.conversationsData) {
                     const urlParams = new URLSearchParams(window.location.search);
                     const sessionId = urlParams.get('session_id');
-                    fetch(`/api/conversations?session_id=${sessionId}`)
+                    const conversationsUrl = sessionId ? `/api/conversations?session_id=${sessionId}` : '/api/conversations';
+                    fetch(conversationsUrl)
                         .then(response => response.json())
                         .then(data => {
                             window.conversationsData = data;
@@ -2445,7 +2517,8 @@
                 if (!window.conversationsData) {
                     const urlParams = new URLSearchParams(window.location.search);
                     const sessionId = urlParams.get('session_id');
-                    fetch(`/api/conversations?session_id=${sessionId}`)
+                    const conversationsUrl = sessionId ? `/api/conversations?session_id=${sessionId}` : '/api/conversations';
+                    fetch(conversationsUrl)
                         .then(response => response.json())
                         .then(data => {
                             window.conversationsData = data;
@@ -2580,7 +2653,8 @@
                                 audioElement.controls = true;
                                 const urlParams = new URLSearchParams(window.location.search);
                                 const sessionId = urlParams.get('session_id');
-                                audioElement.src = `/api/audio/${audio.audio_file}?session_id=${sessionId}`;
+                                const audioUrl = sessionId ? `/api/audio/${audio.audio_file}?session_id=${sessionId}` : `/api/audio/${audio.audio_file}`;
+                                audioElement.src = audioUrl;
                                 audioElement.style.width = '100%';
                                 audioElement.style.marginTop = '0.5rem';
                                 

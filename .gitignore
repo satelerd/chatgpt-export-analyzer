@@ -93,3 +93,6 @@ config.local.py
 # Datos de ejemplo (opcional)
 example_data/
 sample_data/
+
+# Datos precargados del usuario (NUNCA subir al repo)
+preloaded_data/

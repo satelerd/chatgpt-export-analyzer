@@ -22,8 +22,14 @@ app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB max
 # Directorio temporal para procesar archivos
 TEMP_DIR = tempfile.mkdtemp()
 
+# Directorio de datos precargados
+PRELOADED_DIR = os.path.join(os.path.dirname(__file__), 'preloaded_data')
+
 # Almacenamiento en memoria para sesiones (en producción usar Redis)
 sessions = {}
+
+# ID de sesión precargada
+PRELOADED_SESSION_ID = 'preloaded-daniel-session'
 
 @app.route('/')
 def index():
@@ -157,7 +163,11 @@ def get_stats():
     """Obtener estadísticas de la sesión"""
     session_id = request.args.get('session_id')
     
-    if not session_id or session_id not in sessions:
+    # Si no hay session_id, usar sesión precargada
+    if not session_id:
+        session_id = PRELOADED_SESSION_ID
+    
+    if session_id not in sessions:
         return jsonify({'error': 'Sesión no válida'}), 400
     
     session = sessions[session_id]
@@ -174,7 +184,11 @@ def serve_audio(filename):
     """Servir archivos de audio"""
     session_id = request.args.get('session_id')
     
-    if not session_id or session_id not in sessions:
+    # Si no hay session_id, usar sesión precargada
+    if not session_id:
+        session_id = PRELOADED_SESSION_ID
+    
+    if session_id not in sessions:
         return jsonify({'error': 'Sesión no válida'}), 400
     
     session = sessions[session_id]
@@ -190,7 +204,11 @@ def get_conversations():
     """Obtener conversaciones completas"""
     session_id = request.args.get('session_id')
     
-    if not session_id or session_id not in sessions:
+    # Si no hay session_id, usar sesión precargada
+    if not session_id:
+        session_id = PRELOADED_SESSION_ID
+    
+    if session_id not in sessions:
         return jsonify({'error': 'Sesión no válida'}), 400
     
     session = sessions[session_id]
@@ -202,6 +220,14 @@ def get_conversations():
         return jsonify(conversations)
     except Exception as e:
         return jsonify({'error': f'Error cargando conversaciones: {str(e)}'}), 500
+
+@app.route('/preloaded')
+def preloaded_report():
+    """Acceso directo a la sesión precargada"""
+    if PRELOADED_SESSION_ID not in sessions:
+        return jsonify({'error': 'Sesión precargada no disponible'}), 404
+    
+    return send_file(sessions[PRELOADED_SESSION_ID]['report_file'])
 
 @app.route('/health')
 def health_check():
@@ -228,8 +254,33 @@ def cleanup_old_sessions():
         except Exception as e:
             print(f"Error limpiando sesión {session_id}: {str(e)}")
 
+# Inicializar sesión precargada
+def init_preloaded_session():
+    """Inicializar sesión precargada con datos de Daniel"""
+    if os.path.exists(PRELOADED_DIR):
+        stats_file = os.path.join(PRELOADED_DIR, 'stats.json')
+        report_file = os.path.join(PRELOADED_DIR, 'report.html')
+        extract_dir = os.path.join(PRELOADED_DIR, 'extracted')
+        
+        if all(os.path.exists(f) for f in [stats_file, report_file, extract_dir]):
+            sessions[PRELOADED_SESSION_ID] = {
+                'created_at': datetime.now().isoformat(),
+                'stats_file': stats_file,
+                'report_file': report_file,
+                'extract_dir': extract_dir,
+                'preloaded': True
+            }
+            print(f"✅ Sesión precargada inicializada: {PRELOADED_SESSION_ID}")
+        else:
+            print("⚠️ Archivos de sesión precargada no encontrados")
+    else:
+        print("⚠️ Directorio de datos precargados no encontrado")
+
 # Ejecutar limpieza al inicio
 cleanup_old_sessions()
+
+# Inicializar sesión precargada
+init_preloaded_session()
 
 if __name__ == '__main__':
     # Para desarrollo local
